@@ -20,55 +20,79 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $credentials = $request->only(['email', 'password']);
+        //If the request does not contain an email field change the required email field to userName
+        if( $request->only('email') == array('email' => NULL,) ) {
+            $login = 'username';
+        }else{
+            $login = 'email';
+        }
 
+        //Retrieve the required values from the the request for login
+        $credentials = $request->only([$login, 'password']);
+
+        //Establish the required rules for validation
         $validator = Validator::make($credentials, [
-            'email' => 'required',
+            $login => 'required',
             'password' => 'required',
         ]);
 
+        //If the validator does not receive the required inputs send errors
         if($validator->fails()) {
             throw new ValidationHttpException($validator->errors()->all());
         }
 
+        //If after attempting to validate with the database and a match can not be made, send Unauthorized error
         try {
             if (! $token = JWTAuth::attempt($credentials)) {
                 return $this->response->errorUnauthorized();
             }
+
+        //If while trying to validate a server error occurs, send server error
         } catch (JWTException $e) {
             return $this->response->error('could_not_create_token', 500);
         }
-
+        
+        //If successful validation, return token
         return response()->json(compact('token'));
     }
 
+
     public function signup(Request $request)
     {
+        //Retrieves fields we want from config/boilerplate.php
         $signupFields = Config::get('boilerplate.signup_fields');
         $hasToReleaseToken = Config::get('boilerplate.signup_token_release');
 
+        //Assigns the supplied values from $request to the requested fields
         $userData = $request->only($signupFields);
 
+        //Makes sure the supplied values meet our demands
         $validator = Validator::make($userData, Config::get('boilerplate.signup_fields_rules'));
 
+        //If they don't then throw an error
         if($validator->fails()) {
             throw new ValidationHttpException($validator->errors()->all());
         }
 
+        //Unguard allows access to the Users model which is used to create a new user and is then locked back down
         User::unguard();
         $user = User::create($userData);
         User::reguard();
 
+        //If the user couldn't be created then throw an error
         if(!$user->id) {
             return $this->response->error('could_not_create_user', 500);
         }
 
+        //If the user was granted a token, then log them in
         if($hasToReleaseToken) {
             return $this->login($request);
         }
         
+        //Return the created instance of the model
         return $this->response->created();
     }
+
 
     public function recovery(Request $request)
     {

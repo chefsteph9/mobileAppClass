@@ -12,7 +12,7 @@ class User extends Authenticatable
      * @var array
      */
     protected $fillable = [
-        'name', 'email', 'password',
+        'userName', 'email', 'password',
     ];
 
     /**
@@ -32,5 +32,30 @@ class User extends Authenticatable
     public function setPasswordAttribute($value)
     {
         $this->attributes['password'] = \Hash::make($value);
+    }
+
+    public function devices()
+    {
+        return $this->hasMany('App\Device');
+    }
+
+    public function licenses()
+    {
+        return $this->hasMany('App\License');
+    }
+
+    public function topics()
+    {
+        return $this->hasMany('App\Topic');
+    }
+
+    public function beliefs()
+    {
+        return $this->hasMany('App\Belief');
+    }
+
+    public function verses()
+    {
+        return $this->hasMany('App\Verse');
     }
 }
